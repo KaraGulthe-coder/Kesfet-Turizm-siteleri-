@@ -1,0 +1,53 @@
+name: Günlük Blog Güncelle
+
+on:
+  schedule:
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+
+jobs:
+  update-blog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Blog içeriği oluştur
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          MONTH=$(date +%m)
+          
+          if [ "$MONTH" -ge 6 ] && [ "$MONTH" -le 8 ]; then
+            SEASON="yaz"
+          elif [ "$MONTH" -ge 9 ] && [ "$MONTH" -le 11 ]; then
+            SEASON="sonbahar"
+          elif [ "$MONTH" -eq 12 ] || [ "$MONTH" -le 2 ]; then
+            SEASON="kış"
+          else
+            SEASON="ilkbahar"
+          fi
+          
+          cat > daily-content.json << JSONEOF
+          {
+            "date": "$DATE",
+            "season": "$SEASON",
+            "updated": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "posts": [
+              {
+                "id": 1,
+                "title": "Muğla'da $SEASON Tatili Rehberi",
+                "category": "genel",
+                "date": "$DATE",
+                "excerpt": "Muğla'nın eşsiz güzellikleri $SEASON mevsiminde sizi bekliyor.",
+                "readTime": 3
+              }
+            ]
+          }
+          JSONEOF
+
+      - name: Değişiklikleri kaydet
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add daily-content.json
+          git diff --staged --quiet || git commit -m "Blog güncellendi: $(date +%Y-%m-%d)"
+          git push
